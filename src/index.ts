@@ -10,19 +10,19 @@ const app = new Elysia()
     const $ = cheerio.load(html);
     const movies: any = [];
 
-    // Extract movie data
     $(".item.movies").each((i, el) => {
       const title = $(el).find("h3 a").text();
       const image = $(el).find(".poster img").attr("src");
       const link = $(el).find("h3 a").attr("href");
-      const year = title.match(/\((\d{4})\)/)?.[1] || null;
+      const yearMatch = /\((\d{4})\)/.exec(title);
+      const year = yearMatch ? parseInt(yearMatch[1], 10) : null;
       const rating = parseFloat($(el).find(".rating").text()) || null;
 
       movies.push({
         title,
         image: image ? (image.startsWith("http") ? image : `https:${image}`) : null,
         link: link ? (link.startsWith("http") ? link : `https:${link}`) : null,
-        year: year ? parseInt(year, 10) : null,
+        year: year ?? null,
         rating,
       });
     });
@@ -36,7 +36,6 @@ const app = new Elysia()
 
     const $ = cheerio.load(html);
 
-    // Extract movie details
     const title = $("title").text();
     const description = $("meta[property='og:description']").attr("content") || "No description available";
     const poster = $("meta[property='og:image']").attr("content");
