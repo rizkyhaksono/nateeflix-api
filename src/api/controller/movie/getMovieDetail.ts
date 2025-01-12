@@ -3,12 +3,27 @@ import * as cheerio from "cheerio";
 
 export default createElysia()
   .get("/:link", async ({ params }: { params: { link: string } }) => {
-    const url = await fetch(
-      `https://idlix.my/nonton-film-${params.link}-subtitle-indonesia/`
-    );
-    const html = await url.text();
+    const { link } = params;
+    let url: string;
+
+    // Check conditions for the URL
+    if (link.includes("nonton") && link.includes("sub-indo")) {
+      url = link; // Use the provided full link directly
+    } else if (link.includes("nonton-film") && link.includes("subtitle-indonesia")) {
+      url = `https://idlix.my/${link}`;
+    } else {
+      return {
+        status: 400,
+        message: "Invalid link format.",
+      };
+    }
+
+    // Fetch and process the HTML
+    const response = await fetch(url);
+    const html = await response.text();
     const $ = cheerio.load(html);
 
+    // Extract details
     let title = $("h1.entry-title[itemprop='name']").text().trim();
     const description = $("div.desc p").text().trim();
     const poster = $("div.thumb img").attr("src");
@@ -55,7 +70,9 @@ export default createElysia()
       const iframe = $(element).find("iframe").attr("src");
 
       if (serverId && servers[serverId]) {
-        servers[serverId].iframe = iframe ? `<iframe src="${iframe}" frameborder="0" allowfullscreen></iframe>` : null;
+        servers[serverId].iframe = iframe
+          ? `<iframe src="${iframe}" frameborder="0" allowfullscreen></iframe>`
+          : null;
       }
     });
 
@@ -68,7 +85,7 @@ export default createElysia()
 
           for (const serverId in servers) {
             if (servers[serverId].name.toLowerCase().includes("filelions")) {
-              servers[serverId].filemoon = newFilemoonUrl;  // Update the filemoon URL
+              servers[serverId].filemoon = newFilemoonUrl;
             }
           }
         }
@@ -99,8 +116,10 @@ export default createElysia()
       status: 200,
       data: details,
     };
-  }, {
-    detail: {
-      tags: ["Movie"],
+  },
+    {
+      detail: {
+        tags: ["Movie"],
+      },
     },
-  });
+  );
