@@ -27,10 +27,10 @@ const createSlug = (title: string, year: number | null, link: string | null): st
   }
 };
 
-export default createElysia().get(
-  "/",
-  async () => {
-    const url = await fetch(`${Bun.env.BASE_URL}https://idlix.my/`);
+export default createElysia()
+  .get("/search-movie/:query", async ({ params }: { params: { query: string } }) => {
+    const { query } = params;
+    const url = await fetch(`${Bun.env.BASE_URL}https://idlix.my/?s=${query}`);
     const html = await url.text();
     const $ = cheerio.load(html);
 
@@ -59,37 +59,34 @@ export default createElysia().get(
       }
 
       const cleanTitle = title.replace(/\(\d{4}\)/, '').trim();
-      const slug = createSlug(cleanTitle, year, linkUrl);
 
-      const item = {
-        title,
-        image: imageUrl,
-        link: linkUrl,
-        slug,
-        year: year ?? null,
-        rating,
-        quality,
-        type,
-      };
-
-      if (linkUrl?.includes('sub-indo')) {
-        tvSeries.push(item);
-      } else if (linkUrl?.includes('subtitle-indonesia')) {
-        movies.push(item);
+      if (type === 'Movie') {
+        movies.push({
+          title: cleanTitle,
+          year,
+          rating,
+          quality,
+          image: imageUrl,
+          slug: createSlug(cleanTitle, year, linkUrl),
+        });
+      } else if (type === 'TV Series') {
+        tvSeries.push({
+          title: cleanTitle,
+          year,
+          rating,
+          quality,
+          image: imageUrl,
+          slug: createSlug(cleanTitle, year, linkUrl),
+        });
       }
     });
 
     return {
       status: 200,
-      data: {
-        movies,
-        tvSeries,
-      },
+      data: { movies, tvSeries },
     };
-  },
-  {
+  }, {
     detail: {
-      tags: ["Movie", "TV Series"],
-    },
-  }
-);
+      tags: ["Movie"],
+    }
+  });

@@ -20,6 +20,10 @@ export const docs = swagger({
         description: "Nateeflix API Documentation",
       },
       {
+        name: "TV Series",
+        description: "Nateeflix API Documentation"
+      },
+      {
         name: "Latest Movies",
         description: "Nateeflix API Documentation",
       },
@@ -33,10 +37,6 @@ export const docs = swagger({
       },
       {
         name: "Anime",
-        description: "Nateeflix API Documentation"
-      },
-      {
-        name: "TV Series",
         description: "Nateeflix API Documentation"
       },
       {

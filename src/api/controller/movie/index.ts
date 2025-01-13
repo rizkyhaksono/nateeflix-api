@@ -1,7 +1,7 @@
-import getMovie from "./getMovie";
 import getMovieDetail from "./getMovieDetail";
+import getMovieSearch from "./getMovieSearch";
 
 export {
-  getMovie,
-  getMovieDetail
+  getMovieDetail,
+  getMovieSearch
 }
