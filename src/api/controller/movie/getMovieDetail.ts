@@ -5,10 +5,11 @@ export default createElysia()
   .get("/:link", async ({ params }: { params: { link: string } }) => {
     const { link } = params;
     let url: string;
+    let isTvSeries = false;
 
-    // Check conditions for the URL
     if (link.includes("nonton") && link.includes("sub-indo")) {
-      url = link; // Use the provided full link directly
+      isTvSeries = true;
+      url = `https://idlix.my/${link}`;
     } else if (link.includes("nonton-film") && link.includes("subtitle-indonesia")) {
       url = `https://idlix.my/${link}`;
     } else {
@@ -18,57 +19,61 @@ export default createElysia()
       };
     }
 
-    // Fetch and process the HTML
     const response = await fetch(url);
     const html = await response.text();
     const $ = cheerio.load(html);
 
-    // Extract details
-    let title = $("h1.entry-title[itemprop='name']").text().trim();
-    const description = $("div.desc p").text().trim();
-    const poster = $("div.thumb img").attr("src");
-    const genres = $("div.genxed a")
-      .map((i, el) => $(el).text())
-      .get();
-    const duration = $("div.info-content meta[property='duration']").attr("content")?.trim();
-    const quality = $("div.info-content span:contains('Quality') a").text();
-    const year = $("div.info-content span:contains('Year') a").text();
-    const country = $("div.info-content span:contains('Country') a").text();
-    const director = $("div.info-content span:contains('Director') a").text();
-    const cast = $("div.info-content span:contains('Cast') a")
-      .map((i, el) => $(el).text())
-      .get()
-      .join(', ');
-    const views = $("div.post-views-count").text()?.trim();
-    const update = $("div.info-content span:contains('Updated:') time").attr("datetime")?.trim();
-    const ratingValue = $('div.rating strong[itemprop="ratingValue"]').text()?.replace('Rating ', '').trim();
-    const ratingCount = $('div.gmr-rating-content.rtp span[itemprop="ratingCount"]').text()?.trim();
-    const ratingbar = $('div.gmr-rating-bar span').attr("style")?.trim().replace('width:', '');
+    if (isTvSeries) {
+      const episodes: any[] = [];
+      $(".eplister ul li").each((_, el) => {
+        const episodeNumber = $(el).find(".epl-num").text().trim();
+        const episodeTitle = $(el).find(".epl-title").text().trim();
+        const releaseDate = $(el).find(".epl-date").text().trim();
+        const episodeLink = $(el).find("a").attr("href");
 
-    const serverOptions = $(".muvipro-player-tabs li a")
-      .map((i, el) => ({
-        id: $(el).attr("href")?.replace("#", ""),
-        name: $(el).text().trim(),
-      }))
-      .get();
+        episodes.push({
+          episodeNumber,
+          episodeTitle,
+          releaseDate,
+          link: episodeLink?.startsWith("http") ? episodeLink : `https:${episodeLink}`,
+        });
+      });
 
-    const servers: any = {};
+      const details = {
+        title: $("h1.entry-title[itemprop='name']").text().trim(),
+        description: $(".desc p").text().trim(),
+        poster: $("div.thumbook img").attr("src"),
+        genres: $(".genxed a").map((i, el) => $(el).text().trim()).get(),
+        year: $("div.info-content span:contains('Year') a").text().trim(),
+        network: $("div.info-content span:contains('Network') a").text().trim(),
+        episodes,
+      };
 
-    $(".gmr-player-nav ul.muvipro-player-tabs li a").each((index, element) => {
-      const serverId = $(element).attr("href")?.replace("#", "");
-      if (serverId) {
-        servers[serverId] = {
-          name: $(element).text().trim(),
-          iframe: null,
-          filemoon: null,
-        };
-      }
+      return {
+        status: 200,
+        data: { type: "TV Series", ...details },
+      };
+    }
+
+    const servers: Record<string, {
+      name: string;
+      iframe: string | null;
+      filemoon: string | null;
+    }> = {};
+
+    $('.gmr-server-wrap a').each((_, element) => {
+      const name = $(element).text().trim();
+      const serverId = $(element).attr('href')?.replace('#', '') ?? 'server-' + Object.keys(servers).length;
+      servers[serverId] = {
+        name,
+        iframe: null,
+        filemoon: null
+      };
     });
 
-    $(".tab-content-ajax").each((index, element) => {
-      const serverId = $(element).attr("id");
-      const iframe = $(element).find("iframe").attr("src");
-
+    $('.gmr-server-wrap iframe').each((_, element) => {
+      const iframe = $(element).attr('src');
+      const serverId = $(element).closest('[id]').attr('id');
       if (serverId && servers[serverId]) {
         servers[serverId].iframe = iframe
           ? `<iframe src="${iframe}" frameborder="0" allowfullscreen></iframe>`
@@ -76,50 +81,54 @@ export default createElysia()
       }
     });
 
-    $(".gmr-download-list li a").each((index, element) => {
-      const href = $(element).attr("href");
-      if (href?.includes("filemoon.in/download/")) {
-        const filemoonId = href.split("/").pop();
-        if (filemoonId) {
-          const newFilemoonUrl = `https://filemoon.in/e/${filemoonId}`;
+    let filemoonUrl: string | null = null;
 
-          for (const serverId in servers) {
-            if (servers[serverId].name.toLowerCase().includes("filelions")) {
-              servers[serverId].filemoon = newFilemoonUrl;
-            }
-          }
+    $('.gmr-download-list li a, .download-movie li a').each((_, element) => {
+      const href = $(element).attr('href');
+      if (href?.includes('filemoon.in/download/')) {
+        const filemoonId = href.split('/').pop();
+        if (filemoonId) {
+          filemoonUrl = `https://filemoon.in/e/${filemoonId}`;
         }
       }
     });
 
+    if (filemoonUrl) {
+      Object.keys(servers).forEach(serverId => {
+        const serverName = servers[serverId].name.toLowerCase();
+        if (serverName.includes('filelions') ||
+          serverName.includes('filemon') ||
+          serverName.includes('filemoon')) {
+          servers[serverId].filemoon = filemoonUrl;
+        }
+      });
+    }
+
     const details = {
-      title,
-      description,
-      poster,
-      genres,
-      duration,
-      quality,
-      year,
-      country,
-      director,
-      cast,
-      views,
-      update,
-      ratingValue,
-      ratingCount,
-      ratingbar,
+      title: $("h1.entry-title[itemprop='name']").text().trim(),
+      description: $("div.desc p").text().trim(),
+      poster: $("div.thumb img").attr("src"),
+      genres: $("div.genxed a").map((i, el) => $(el).text()).get(),
+      duration: $("div.info-content meta[property='duration']").attr("content")?.trim(),
+      quality: $("div.info-content span:contains('Quality') a").text(),
+      year: $("div.info-content span:contains('Year') a").text(),
+      country: $("div.info-content span:contains('Country') a").text(),
+      director: $("div.info-content span:contains('Director') a").text(),
+      cast: $("div.info-content span:contains('Cast') a").map((i, el) => $(el).text()).get().join(', '),
+      views: $("div.post-views-count").text()?.trim(),
+      update: $("div.info-content span:contains('Updated:') time").attr("datetime")?.trim(),
+      ratingValue: $('div.rating strong[itemprop="ratingValue"]').text()?.replace('Rating ', '').trim(),
+      ratingCount: $('div.gmr-rating-content.rtp span[itemprop="ratingCount"]').text()?.trim(),
+      ratingbar: $('div.gmr-rating-bar span').attr("style")?.trim().replace('width:', ''),
       servers,
-      serverOptions,
     };
 
     return {
       status: 200,
       data: details,
     };
-  },
-    {
-      detail: {
-        tags: ["Movie"],
-      },
+  }, {
+    detail: {
+      tags: ["Movie"],
     },
-  );
+  });
