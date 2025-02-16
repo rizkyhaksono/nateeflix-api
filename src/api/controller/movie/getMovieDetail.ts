@@ -55,32 +55,6 @@ export default createElysia()
       };
     }
 
-    // const servers: Record<string, {
-    //   name: string;
-    //   iframe: string | null;
-    //   filemoon: string | null;
-    // }> = {};
-
-    // $('.gmr-server-wrap a').each((_, element) => {
-    //   const name = $(element).text().trim();
-    //   const serverId = $(element).attr('href')?.replace('#', '') ?? 'server-' + Object.keys(servers).length;
-    //   servers[serverId] = {
-    //     name,
-    //     iframe: null,
-    //     filemoon: null
-    //   };
-    // });
-
-    // $('.gmr-server-wrap iframe').each((_, element) => {
-    //   const iframe = $(element).attr('src');
-    //   const serverId = $(element).closest('[id]').attr('id');
-    //   if (serverId && servers[serverId]) {
-    //     servers[serverId].iframe = iframe
-    //       ? `<iframe src="${iframe}" frameborder="0" allowfullscreen></iframe>`
-    //       : null;
-    //   }
-    // });
-
     let streaming: string | null = null;
 
     $('.gmr-download-list li a').each((_, element) => {
@@ -93,29 +67,8 @@ export default createElysia()
       }
     });
 
-    // $('.gmr-download-list li a, .download-movie li a').each((_, element) => {
-    //   const href = $(element).attr('href');
-    //   if (href?.includes('filemoon.in/download/')) {
-    //     const filemoonId = href.split('/').pop();
-    //     if (filemoonId) {
-    //       filemoonUrl = `https://filemoon.in/e/${filemoonId}`;
-    //     }
-    //   }
-    // });
-
-    // if (filemoonUrl) {
-    //   Object.keys(servers).forEach(serverId => {
-    //     const serverName = servers[serverId].name.toLowerCase();
-    //     if (serverName.includes('filelions') ||
-    //       serverName.includes('filemon') ||
-    //       serverName.includes('filemoon')) {
-    //       servers[serverId].filemoon = filemoonUrl;
-    //     }
-    //   });
-    // }
-
     const details = {
-      title: $("h1.entry-title[itemprop='name']").text().trim(),
+      title: $(".breadcrumb_last").first().text().trim(),
       description: $("div.desc p").text().trim(),
       poster: $("div.thumb img").attr("src"),
       genres: $("div.genxed a").map((i, el) => $(el).text()).get(),
